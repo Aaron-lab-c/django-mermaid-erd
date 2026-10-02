@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Django ${{ matrix.django }} / Python ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { django: "3.2", python: "3.9", os: ubuntu-latest }
+          - { django: "3.2", python: "3.10", os: ubuntu-latest }
+          - { django: "4.2", python: "3.9", os: ubuntu-latest }
+          - { django: "4.2", python: "3.10", os: ubuntu-latest }
+          - { django: "4.2", python: "3.11", os: ubuntu-latest }
+          - { django: "4.2", python: "3.12", os: ubuntu-latest }
+          - { django: "5.0", python: "3.10", os: ubuntu-latest }
+          - { django: "5.0", python: "3.11", os: ubuntu-latest }
+          - { django: "5.0", python: "3.12", os: ubuntu-latest }
+          - { django: "5.1", python: "3.10", os: ubuntu-latest }
+          - { django: "5.1", python: "3.11", os: ubuntu-latest }
+          - { django: "5.1", python: "3.12", os: ubuntu-latest }
+          - { django: "5.1", python: "3.13", os: ubuntu-latest }
+          - { django: "5.2", python: "3.10", os: ubuntu-latest }
+          - { django: "5.2", python: "3.11", os: ubuntu-latest }
+          - { django: "5.2", python: "3.12", os: ubuntu-latest }
+          - { django: "5.2", python: "3.13", os: ubuntu-latest }
+          # paths, encodings and line endings
+          - { django: "5.2", python: "3.12", os: windows-latest }
+          - { django: "5.2", python: "3.12", os: macos-latest }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "Django~=${{ matrix.django }}.0" pytest
+          python -m pip install -e .
+      - name: Test
+        run: python -m pytest
+
+  mermaid-syntax:
+    name: Mermaid syntax (mmdc)
+    runs-on: ubuntu-latest
+    env:
+      REQUIRE_MMDC: "1"
+      MERMAID_ERD_PUPPETEER_CONFIG: ${{ github.workspace }}/puppeteer-config.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install mermaid-cli
+        run: |
+          npm install -g @mermaid-js/mermaid-cli
+          echo '{"args": ["--no-sandbox"]}' > puppeteer-config.json
+          mmdc --version
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "Django~=5.2.0" pytest
+          python -m pip install -e .
+      - name: Test (mmdc validation must not be skipped)
+        run: python -m pytest -rs tests/test_mermaid_syntax.py
+      - name: README diagram renders
+        run: |
+          mermaid-erd --settings tests.settings shop --no-banner --svg readme-example.svg --renderer mmdc
+          test -s readme-example.svg
+
+  package:
+    name: Build and check package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Smoke test the wheel in a fresh project
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install dist/*.whl
+          /tmp/smoke/bin/pip list --format=freeze
+          cd /tmp && /tmp/smoke/bin/django-admin startproject smokesite
+          cd /tmp/smokesite
+          /tmp/smoke/bin/mermaid-erd --settings smokesite.settings --include-builtin | head -5
+          sed -i 's/"django.contrib.staticfiles",/"django.contrib.staticfiles", "django_mermaid_erd",/' smokesite/settings.py
+          /tmp/smoke/bin/python manage.py mermaid_erd --include-builtin -o docs/erd.md
+          /tmp/smoke/bin/python manage.py mermaid_erd --include-builtin -o docs/erd.md --check

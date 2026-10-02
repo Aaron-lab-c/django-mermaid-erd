@@ -1,0 +1,10 @@
+# Runs in your own environment (language: system) because it must import your
+# Django project. Pass your settings and target, e.g.:
+#   args: [--settings, myproject.settings, -o, docs/erd.md]
+- id: mermaid-erd-check
+  name: ER diagram is up to date (mermaid-erd --check)
+  description: Fail when the committed Mermaid ER diagram no longer matches the Django models.
+  entry: mermaid-erd --check
+  language: system
+  pass_filenames: false
+  files: (^|/)models(\.py$|/)

@@ -1,0 +1,54 @@
+# --- Python bytecode / caches ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# --- Virtual environments (never commit) ---
+.venv/
+venv/
+env/
+.python-version
+
+# --- Build / packaging artifacts (built by CI on release) ---
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+
+# --- Local secrets & machine-specific config ---
+.env
+.env.*
+*.pem
+*.key
+.pypirc
+.claude/settings.local.json
+
+# --- Local databases & scratch output ---
+*.sqlite3
+*.db
+/erd.*
+/*.svg
+/*.png
+tests/**/*.svg
+tests/**/*.png
+puppeteer-config.json
+
+# --- Node (only used for mermaid-cli) ---
+node_modules/
+npm-debug.log*
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,40 @@
+erDiagram
+    direction LR
+    %% app: inventory
+    Device {
+        ip ip_address "nullable"
+        file firmware
+    }
+    Item {
+        uuid id PK
+        string sku UK
+        text description
+        json attributes
+        binary thumbnail "nullable"
+        float weight "nullable"
+    }
+    LegacyTable {
+        string code PK
+        text payload
+    }
+    Stock {
+        int id PK
+        uuid item_id FK, UK
+        int warehouse_id FK
+        int quantity
+    }
+    Vehicle {
+        int id PK
+        string serial
+        date purchased_on "nullable"
+        string plate
+    }
+    Warehouse {
+        int id PK
+        string name
+        text address
+    }
+
+    Vehicle ||--|| Device : "inherits"
+    Item ||--|| Stock : "item"
+    Warehouse ||--o{ Stock : "warehouse"
